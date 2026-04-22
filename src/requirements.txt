@@ -1,1 +1,9 @@
 
+langchain>=0.1.0
+langchain-openai
+langchain-community
+neo4j>=5.14.1
+python-dotenv
+pandas
+tiktoken
+faiss-cpu
