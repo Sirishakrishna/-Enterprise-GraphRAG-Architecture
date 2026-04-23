@@ -2,6 +2,10 @@
 import os
 from neo4j import GraphDatabase
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables from the .env file we created
+load_dotenv()
 
 # Configure basic logging for enterprise observability
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -33,12 +37,10 @@ class KnowledgeGraphBuilder:
         Create unique constraints on the graph to prevent data duplication.
         This is a critical step for deterministic GraphRAG.
         """
-        query = """
-        CREATE CONSTRAINT unique_document IF NOT EXISTS FOR (d:Document) REQUIRE d.id IS UNIQUE;
-        CREATE CONSTRAINT unique_entity IF NOT EXISTS FOR (e:Entity) REQUIRE e.name IS UNIQUE;
-        """
         with self.driver.session() as session:
-            session.run(query)
+            # We run these individually as best practice for Neo4j Python Driver
+            session.run("CREATE CONSTRAINT unique_document IF NOT EXISTS FOR (d:Document) REQUIRE d.id IS UNIQUE;")
+            session.run("CREATE CONSTRAINT unique_entity IF NOT EXISTS FOR (e:Entity) REQUIRE e.name IS UNIQUE;")
             logger.info("Graph constraints verified and applied.")
 
     def ingest_document_nodes(self, document_id: str, content: str):
@@ -54,14 +56,25 @@ class KnowledgeGraphBuilder:
             session.run(query, doc_id=document_id, content=content)
             logger.info(f"Ingested Document Node: {document_id}")
 
-# --- Test the connection (Will require actual credentials later) ---
+# --- Execute the Architecture ---
+# --- Execute the Architecture ---
 if __name__ == "__main__":
-    # We use environment variables to ensure API keys are never hardcoded!
-    NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
-    NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
-    NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
+    # Using the EXACT credentials from your new instance
+    NEO4J_URI = "neo4j+s://d5eac149.databases.neo4j.io"
+    NEO4J_USER = "d5eac149"   # <-- This was the missing puzzle piece!
+    NEO4J_PASSWORD = "UH_MvD8mVLG6WW5gFK4KZvhXkLCqxtjF_MNo2t2mxzs"
     
-    # Initialize the builder
-    # kg_builder = KnowledgeGraphBuilder(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)
-    # kg_builder.create_constraints()
-    # kg_builder.close()
+    # 1. Initialize the builder
+    kg_builder = KnowledgeGraphBuilder(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)
+    
+    # 2. Create schema constraints
+    kg_builder.create_constraints()
+    
+    # 3. Add a sample document to the Graph
+    kg_builder.ingest_document_nodes(
+        document_id="DOC_001", 
+        content="Databricks and Visa are hiring elite AI Architects."
+    )
+    
+    # 4. Close the connection securely
+    kg_builder.close()
